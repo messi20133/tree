@@ -1,5 +1,6 @@
 .dropdown {
   background: #E5E9F2;
+  box-shadow: 1px 1px 2px #000;
   width: 200px;
   border-radius: 4px;
   position: absolute;
@@ -22,8 +23,9 @@
   height: 12px;
   background: #7abbff;
   border-radius: 3px;
-  top: 4px;
   position: relative;
+  top: 3px;
+  
 }
 .partSelect::before{
   content: "";
@@ -34,4 +36,14 @@
   position: absolute;
   top: 5px;
   left: 2px;
+}
+.inlineblock{
+  display: inline-block;
+}
+.treelistArea {
+  width: 500px;
+  border: 1px solid #99A9BF;
+  border-radius: 3px;
+  padding-left: -15px;
+  font-size: 14px;
 }

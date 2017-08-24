@@ -1,16 +1,4 @@
-// The Vue build version to load with the `import` command
-// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
-// import App from './App'
-// import ElementUI from 'element-ui'
-// import 'element-ui/lib/theme-default/index.css'
-// import {Tree} from 'element-ui'
-// Vue.use(Tree)
-// Vue.config.productionTip = false
-
-
-
-//require('./components/tree.js')(Vue);
 
 const stateMap = {
   'NOCHECK': 0,
@@ -18,10 +6,9 @@ const stateMap = {
   'ALLCHECK': 2,
 }
 
-
 Vue.component('CommonNode', {
   template: `<div class="commonnode" @click="checkNode"><span><input type="checkbox" :checked="checked"/><span>{{label}}</span></span><slot></slot></div>`,
-  props: ['id', 'label', 'isChecked', 'level' ],
+  props: ['id', 'label', 'isChecked', 'level', 'flatLevel' ],
   data: function () {
     return {
       checked: this.isChecked
@@ -49,12 +36,13 @@ Vue.component('CommonNode', {
 });
 
 Vue.component('ParentNode', {
-  template: `<div class="parentnode" @mouseleave="mouseLeave" @mouseenter="mouseEnter"><span @click="checkedAll" ><input type="checkbox" :class="{partSelect: checked == 1}"  :checked="checked == 2"/><span>{{label}}</span></span><div><slot></slot></div></div>`,
-  props: ['id', 'label', 'isChecked', 'children', 'level'],
+  template: `<div class="parentnode" @mouseleave="mouseLeave" @mouseenter="mouseEnter"><span @click="checkedAll" ><input type="checkbox" :class="{partSelect: checked == 1}"  :checked="checked == 2"/><span>{{label}}</span></span><div v-show="showPanel" :class="{dropdown:level>=flatLevel}"><slot></slot></div></div>`,
+  props: ['id', 'label', 'isChecked', 'children', 'level', 'flatLevel'],
   data: function () {
     return {
       checked: this.isChecked,
-      childrenList: this.children ? JSON.parse(JSON.stringify(this.children)) : []
+      childrenList: this.children ? JSON.parse(JSON.stringify(this.children)) : [],
+      showPanel: this.level < this.flatLevel 
     }
   },
   watch: {
@@ -140,16 +128,14 @@ Vue.component('ParentNode', {
       return index;
     },
     mouseEnter (e) {
-      if (this.level == 4) {
-        var root = $(this.$el);
-        root.find('>div').show();
+      if (this.level >= this.flatLevel) {
+        this.showPanel = true;
       }
     },
     mouseLeave (e) {
       e.stopPropagation();
-      if (this.level == 4) {
-        var root = $(this.$el);
-        root.find('>div').hide();
+      if (this.level >= this.flatLevel) {
+        this.showPanel = false;
       }
     }
   }
@@ -167,13 +153,6 @@ Vue.component("TreeList", {
     }, list);
   },
   created: function () {
-    this.$nextTick(() => {
-      var $root = $(this.$el);
-      $root.find('.level_3>div>.level_4').css('display', 'inline-block');
-      $root.find('.level_3>div>.level_4>div').addClass('dropdown').hide();
-      $root.find('.level_3>div>.level_4>div>.level_5').css('display', 'inline-block');
-    });
-    var that = this;
   },
   methods: {
     showList: function (data, h, level) {
@@ -187,18 +166,24 @@ Vue.component("TreeList", {
               label: item.label,
               children: item.children,
               isChecked: !!item.isChecked,
-              level: level + 1
+              level: level + 1,
+              flatLevel: this.flatLevel
             },
             key: item.id
           };
           var childrenArray = [];
           
-          Object.assign(props, {
-            style: {
-              paddingLeft: '15px'
-            }
-          });
+          if (level > 0) {
+            Object.assign(props, {
+              style: {
+                paddingLeft: '15px'
+              }
+            });
+          }
           var classItem = {};
+          if (level + 1 >= this.flatLevel) {
+            classItem['inlineblock'] = true;
+          }
           if (item.children) {
             level++;
             classItem['level_' + level] = true;
@@ -263,7 +248,6 @@ Vue.component("TreeList", {
       return index;
     },
     clickHandle: function () {
-      debugger;
       console.log('sdfsdf');
     },
     collectSelected: function (id, flag) {
@@ -279,17 +263,15 @@ Vue.component("TreeList", {
   data: function () {
     return {
       dataList: [loc],
-      selectedData: []  
+      selectedData: [],
+      flatLevel: 4  
     }
   }
 });
-
 require('./app.css');
-/* eslint-disable no-new */
 new Vue({
   el: '#app',
-  template: '<div><TreeList/></div>',
+  template: '<div class="treelistArea"><TreeList/></div>',
   methods: {
-    
   }
 })
