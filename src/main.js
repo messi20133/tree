@@ -14,6 +14,10 @@ Vue.component('CommonNode', {
       checked: this.isChecked
     }
   },
+  created: function () {
+    if (this.label == '北京') {
+    }
+  },
   watch: {
     isChecked: function (val, oldVal) {
       if (val != oldVal) {
@@ -153,6 +157,21 @@ Vue.component("TreeList", {
     }, list);
   },
   created: function () {
+    //创建叶子节点列表， 方便后面的查找。
+    this.createLeafList(this.dataList);
+    // 循环设置选中状态
+    for (let i=0,len=this.selectedData.length; i<len; i++) {
+      var item = this.selectedData[i];
+      var target = this.leafList.filter((leaf, i)=>{
+        return leaf.id == item;
+      });
+      if (target[0]) {
+        target[0].checked = true;
+      }
+    }
+    this.setParentChecked(this.dataList[0]);
+    this.dataList = JSON.parse(JSON.stringify(this.dataList));
+
   },
   methods: {
     showList: function (data, h, level) {
@@ -165,7 +184,7 @@ Vue.component("TreeList", {
               id: item.id,
               label: item.label,
               children: item.children,
-              isChecked: !!item.isChecked,
+              isChecked: item.checked,
               level: level + 1,
               flatLevel: this.flatLevel
             },
@@ -258,13 +277,65 @@ Vue.component("TreeList", {
       } else {
         selectedData.splice(index, 1);
       }
+    },
+    createLeafList (list, parent) {
+      for (var i=0,len=list.length; i<len; i++) {
+        var item = list[i];
+        if (parent){
+          item.parent = parent;
+        }
+        if (item.children) {
+          parent = JSON.parse(JSON.stringify(item));
+          delete parent.children;
+          this.createLeafList(item.children, parent);
+        } else {
+          this.leafList.push(item);
+        }
+      }
+    },
+    checkStatus: function (list) {
+      var len = list.length;
+      while(len--){
+        if (typeof(list[len]) == "boolean") {
+          list[len] = list[len] ? 1: 0;
+        }
+      }
+      var unique = [... new Set(list)];
+      if (unique.length > 1) {
+          return stateMap.PARTCHECK;
+      } else {
+        if (unique[0]) {
+          return stateMap.ALLCHECK;
+        } else {
+          return stateMap.NOCHECK;
+        }
+      }
+    },
+    setParentChecked (root) {
+      var result = [];
+      if(root.children) {
+        for(let i=0,len=root.children.length;i<len;i++){
+          var item = root.children[i];
+          if (item.children) {
+            result.push(this.setParentChecked(item));
+          } else {
+            result.push(item.checked);
+          }
+        }
+        root.checked = this.checkStatus(result)
+        return root.checked;
+      } else {
+        return root.checked;
+      } 
+      
     }
   },
   data: function () {
     return {
       dataList: [loc],
-      selectedData: [],
-      flatLevel: 4  
+      selectedData: [1, 304],
+      flatLevel: 4 ,
+      leafList: [] 
     }
   }
 });
