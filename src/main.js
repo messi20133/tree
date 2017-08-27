@@ -299,6 +299,9 @@ Vue.component("TreeList", {
         if (typeof(list[len]) == "boolean") {
           list[len] = list[len] ? 1: 0;
         }
+        if (typeof(list[len]) == "undefined") {
+          list[len] = list[len] ? 1: 0;
+        }
       }
       var unique = [... new Set(list)];
       if (unique.length > 1) {
@@ -333,7 +336,7 @@ Vue.component("TreeList", {
   data: function () {
     return {
       dataList: [loc],
-      selectedData: [1, 304],
+      selectedData: [155,333,2,48,199,317,91,34,35,36],
       flatLevel: 4 ,
       leafList: [] 
     }
