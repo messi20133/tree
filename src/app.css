@@ -43,11 +43,12 @@
   width: 500px;
   border: 1px solid #99A9BF;
   border-radius: 3px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: bold;
 }
 input[type='checkbox']{
   display: inline-block;
-  width: 12px;
+  width: 13px;
   height:  12px;
   vertical-align: top;
 }

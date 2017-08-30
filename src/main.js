@@ -1,21 +1,15 @@
 import Vue from 'vue'
-
 const stateMap = {
   'NOCHECK': 0,
   'PARTCHECK': 1,
   'ALLCHECK': 2,
 }
-
 Vue.component('CommonNode', {
-  template: `<div class="commonnode" @click="checkNode"><span><input type="checkbox" :checked="checked"/><span>{{label}}</span></span><slot></slot></div>`,
-  props: ['id', 'label', 'isChecked', 'level', 'flatLevel' ],
+  template: `<div class="commonnode" @click="checkNode"><span><input type="checkbox" :checked="checked" :disabled="!!disabled"/><span>{{node.label}}</span></span><slot></slot></div>`,
+  props: ['node', 'disabled', 'level', 'flatLevel' ],
   data: function () {
     return {
-      checked: this.isChecked
-    }
-  },
-  created: function () {
-    if (this.label == '北京') {
+      checked: this.node.isChecked
     }
   },
   watch: {
@@ -27,9 +21,12 @@ Vue.component('CommonNode', {
   },
   methods: {
     checkNode () {
+      if (this.disabled) {
+        return;
+      } 
       this.checked = !this.checked;
       this.$parent.hasChecked({
-        id: this.id,
+        id: this.node.id,
         checked: this.checked
       }); 
     },
@@ -40,23 +37,18 @@ Vue.component('CommonNode', {
 });
 
 Vue.component('ParentNode', {
-  template: `<div class="parentnode" @mouseleave="mouseLeave" @mouseenter="mouseEnter"><span @click="checkedAll" ><input type="checkbox" :class="{partSelect: checked == 1}"  :checked="checked == 2"/><span>{{label}}</span></span><div v-show="showPanel" :class="{dropdown:level>=flatLevel}"><slot></slot></div></div>`,
-  props: ['id', 'label', 'isChecked', 'children', 'level', 'flatLevel'],
+  template: `<div class="parentnode" @mouseleave="mouseLeave" @mouseenter="mouseEnter"><span @click="checkedAll" ><input type="checkbox" :class="{partSelect: checked == 1}" :disabled="disabled"  :checked="checked == 2"/><span>{{node.label}}</span></span><div v-show="showPanel" :class="{dropdown:level>=flatLevel}"><slot></slot></div></div>`,
+  props: ['node', 'disabled',  'level', 'flatLevel'],
   data: function () {
     return {
-      checked: this.isChecked,
-      childrenList: this.children ? JSON.parse(JSON.stringify(this.children)) : [],
+      checked: this.node.isChecked,
+      childrenList: this.node.children ? JSON.parse(JSON.stringify(this.node.children)) : [],
       showPanel: this.level < this.flatLevel 
     }
   },
   watch: {
     children (val, old) {
       this.childrenList = val ? JSON.parse(JSON.stringify(val)) : [];
-    }
-  },
-  computed: {
-    isPartChecked: function () {
-
     }
   },
   methods: {
@@ -68,13 +60,16 @@ Vue.component('ParentNode', {
       this.checked = this.getNodeState();
       if ($parent) {
         $parent.hasChecked({
-          id: this.id,
+          id: this.node.id,
           checked: this.checked,
           childs: opt
         });
       }
     },
     checkedAll (checkedState) {
+      if (this.disabled) {
+        return;
+      } 
       if (this.checked == stateMap.ALLCHECK) {
         this.checked = stateMap.NOCHECK;
       } else {
@@ -82,7 +77,7 @@ Vue.component('ParentNode', {
       }
       this.setChildrenChecked(this.checked);
       this.$parent.hasChecked({
-        id: this.id,
+        id: this.node.id,
         checked: this.checked
       });
     },
@@ -92,7 +87,7 @@ Vue.component('ParentNode', {
         return item;
       });
       var $children = this.$children;
-      for (var i=0, l=this.children.length; i<l; i++) {
+      for (var i=0, l=this.node.children.length; i<l; i++) {
         $children[i].setCheck(checkedState);
       }
     },
@@ -146,13 +141,14 @@ Vue.component('ParentNode', {
 });
 
 var loc = require('./components/loc.js');
-
+var interest = require('./components/interset.js');
+var channel = require('./components/channel.js');
 Vue.component("TreeList", {
   render: function (h) {
     var list = this.showList(this.dataList, h, 0);
     return h('div', {
       on: {
-        click: this.clickHandle
+        'click': this.clickHandle
       }
     }, list);
   },
@@ -174,6 +170,9 @@ Vue.component("TreeList", {
 
   },
   methods: {
+    clickHandle: function () {
+      console.log(this.selectedData);
+    },
     showList: function (data, h, level) {
       if (Array.isArray(data)) {
         var result = [];
@@ -181,10 +180,13 @@ Vue.component("TreeList", {
           var item = data[i];
           var props = {
             props: {
-              id: item.id,
-              label: item.label,
-              children: item.children,
-              isChecked: item.checked,
+              node: {
+                id: item[this.id],
+                label: item[this.label],
+                children: item[this.children],
+                isChecked: item.checked,
+              },
+              disabled: this.disabled,
               level: level + 1,
               flatLevel: this.flatLevel
             },
@@ -203,13 +205,13 @@ Vue.component("TreeList", {
           if (level + 1 >= this.flatLevel) {
             classItem['inlineblock'] = true;
           }
-          if (item.children) {
+          if (item[this.children]) {
             level++;
             classItem['level_' + level] = true;
             Object.assign(props, {
               class: classItem, 
             });
-            childrenArray.push(this.showList(item.children, h, level));
+            childrenArray.push(this.showList(item[this.children], h, level));
             level--;
             result.push(h("ParentNode", props, childrenArray)); 
           } else {
@@ -227,47 +229,48 @@ Vue.component("TreeList", {
       this.setDataListChecked(this.dataList, opt);
     },
     setDataListChecked: function (list, opt) {
-      var index = this.findItemById(list, opt.id);
+      var idIdentify = this.id;
+      var childrenIdentify = this.children;
+      var index = this.findItemById(list, opt[idIdentify]);
       list[index].checked = opt.checked;
       if (opt.checked == 1) {
         if (opt.childs) {
-          this.setDataListChecked(list[index].children, opt.childs);
+          this.setDataListChecked(list[index][childrenIdentify], opt.childs);
         } else {
-          this.collectSelected(opt.id, opt.checked);
+          this.collectSelected(opt[idIdentify], opt.checked);
         }
       } else {
         this.setAllChecked(list[index], opt.checked == stateMap.ALLCHECK);
       }
     },  
     setAllChecked (list, flag) {
-      if (list.children) {
+      var idIdentify = this.id;
+      var childrenIdentify = this.children;
+      if (list[childrenIdentify]) {
         list.checked = flag ? stateMap.ALLCHECK : stateMap.NOCHECK ;
-        var children = list.children;
+        var children = list[childrenIdentify];
         for (let i=0, len=children.length; i<len; i++) {
           children[i].checked = flag;
-          if (children[i].children) {
+          if (children[i][childrenIdentify]) {
             this.setAllChecked(children[i], flag);
           } else {
-            this.collectSelected(children[i].id, flag);
+            this.collectSelected(children[i][idIdentify], flag);
           }
         }
       } else {
         list.checked = flag;
-        this.collectSelected(list.id, flag);
+        this.collectSelected(list[idIdentify], flag);
       }
     },
     findItemById (list, id) {
       var index = -1;
       for(let i=0, len=list.length; i<len; i++){
-        if (list[i].id == id) {
+        if (list[i][this.id] == id) {
           index = i;
           break;
         }
       }
       return index;
-    },
-    clickHandle: function () {
-      console.log('sdfsdf');
     },
     collectSelected: function (id, flag) {
       var selectedData = this.selectedData;
@@ -279,15 +282,16 @@ Vue.component("TreeList", {
       }
     },
     createLeafList (list, parent) {
+      var children = this.children;
       for (var i=0,len=list.length; i<len; i++) {
         var item = list[i];
         if (parent){
           item.parent = parent;
         }
-        if (item.children) {
+        if (item[children]) {
           parent = JSON.parse(JSON.stringify(item));
-          delete parent.children;
-          this.createLeafList(item.children, parent);
+          delete parent[children];
+          this.createLeafList(item[children], parent);
         } else {
           this.leafList.push(item);
         }
@@ -316,10 +320,11 @@ Vue.component("TreeList", {
     },
     setParentChecked (root) {
       var result = [];
-      if(root.children) {
-        for(let i=0,len=root.children.length;i<len;i++){
-          var item = root.children[i];
-          if (item.children) {
+      var children = this.children;
+      if(root[children]) {
+        for(let i=0,len=root[children].length;i<len;i++){
+          var item = root[children][i];
+          if (item[children]) {
             result.push(this.setParentChecked(item));
           } else {
             result.push(item.checked);
@@ -331,14 +336,40 @@ Vue.component("TreeList", {
         return root.checked;
       } 
       
-    }
+    },
   },
   data: function () {
+    // return {
+    //   dataList: [loc],
+    //   selectedData: [155,333,1,2,48,199,317,91,34,35,36],
+    //   flatLevel: 3 ,
+    //   leafList: [],
+    //   disabled: false,
+    //   id: 'id',
+    //   children: 'children',
+    //   label: 'label'
+    // }
+    ////===================================================
+    // return {
+    //   dataList: [interest.list[0]],
+    //   selectedData: [],
+    //   flatLevel: 2 ,
+    //   leafList: [],
+    //   disabled: false,
+    //   id: 'id',
+    //   children: 'sub',
+    //   label: 'name'
+    // }
+    ////===================================================
     return {
-      dataList: [loc],
-      selectedData: [155,333,2,48,199,317,91,34,35,36],
+      dataList: [channel],
+      selectedData: ['promotion', 'c5', 't168', 'e4381', 'u757', 'u649', 'u716'],
       flatLevel: 4 ,
-      leafList: [] 
+      leafList: [],
+      disabled: false,
+      id: 'id',
+      children: 'sub',
+      label: 'name'
     }
   }
 });
