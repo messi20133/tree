@@ -170,6 +170,42 @@ Vue.component("TreeList", {
 
   },
   methods: {
+    m1: function () {
+      alert('ddddd');
+      this.s1(this.dataList, null,  0);
+      debugger;
+    },
+    s1: function (root, parent, level) {
+      var childrenIdentify = this.children;
+      var idIdentify = this.id;
+      var labelIdentity = this.label;
+      this.result[level + 1] = this.result[level + 1] || [];
+      for(var i=0,len=root.length; i<len; i++){
+        var item = root[i];
+        if (item[childrenIdentify]) {
+          if(this.checked ==  stateMap.ALLCHECK) {
+            var temp = {};
+            temp[idIdentify] = item[idIdentify];
+            temp[labelIdentity] = item[labelIdentity];
+            if (parent && parent.checked == stateMap.ALLCHECK) {
+              temp['parentchecked'] = true;  
+            }
+            this.result[level + 1].push(temp);                      
+          }
+          this.s1(item[childrenIdentify], item, level+1);
+        } else {
+          if (item.checked){
+            var temp = {};
+            temp[idIdentify] = item[idIdentify];
+            temp[labelIdentity] = item[labelIdentity];
+            this.result[level + 1].push(temp);
+            if (parent && parent.checked == stateMap.ALLCHECK) {
+              temp['parentchecked'] = true;  
+            }
+          }
+        }      
+      }    
+    },
     clickHandle: function () {
       console.log(this.selectedData);
     },
@@ -369,14 +405,24 @@ Vue.component("TreeList", {
       disabled: false,
       id: 'id',
       children: 'sub',
-      label: 'name'
+      label: 'name',
+      result: []
     }
   }
 });
 require('./app.css');
+const tpl = `
+  <div class="treelistArea">
+    <TreeList ref="tree"/>
+    <button @click="clickMe">点击</button>
+  </div>
+`;
 new Vue({
   el: '#app',
-  template: '<div class="treelistArea"><TreeList/></div>',
+  template: tpl,
   methods: {
+    clickMe () {
+      this.$refs.tree.m1();
+    }
   }
 })
