@@ -2110,6 +2110,7 @@ var _loc_channel = location2channel(_location['list'][0]);
 _loc_channel['name'] = '地域频道';
 var _channel = {
   name: '全部',
+  id: 'all',
   sub: [
     {
       name: '热门频道',

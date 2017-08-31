@@ -143,13 +143,16 @@ Vue.component('ParentNode', {
 var loc = require('./components/loc.js');
 var interest = require('./components/interset.js');
 var channel = require('./components/channel.js');
+var num = 1;
 Vue.component("TreeList", {
   render: function (h) {
+    console.log("render:" + num);
     var list = this.showList(this.dataList, h, 0);
     return h('div', {
       on: {
         'click': this.clickHandle
-      }
+      },
+      key: 'mykey' 
     }, list);
   },
   created: function () {
@@ -167,7 +170,14 @@ Vue.component("TreeList", {
     }
     this.setParentChecked(this.dataList[0]);
     this.dataList = JSON.parse(JSON.stringify(this.dataList));
-
+    var that = this;
+    setTimeout(function () {
+      var root = that.dataList[0];
+      root.sub[0].sub[1].sub[1].checked= true;
+      //delete root.sub[0].sub[1].sub;
+      that.dataList = JSON.parse(JSON.stringify(that.dataList));
+      debugger;
+    }, 5000);
   },
   methods: {
     m1: function () {
@@ -183,7 +193,7 @@ Vue.component("TreeList", {
       for(var i=0,len=root.length; i<len; i++){
         var item = root[i];
         if (item[childrenIdentify]) {
-          if(this.checked ==  stateMap.ALLCHECK) {
+          if(item.checked ==  stateMap.ALLCHECK) {
             var temp = {};
             temp[idIdentify] = item[idIdentify];
             temp[labelIdentity] = item[labelIdentity];
@@ -344,7 +354,7 @@ Vue.component("TreeList", {
         }
       }
       var unique = [... new Set(list)];
-      if (unique.length > 1) {
+      if (unique.length > 1 || (unique.length == 1 && unique[0] ==stateMap.PARTCHECK)) {
           return stateMap.PARTCHECK;
       } else {
         if (unique[0]) {
